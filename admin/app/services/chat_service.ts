@@ -1,6 +1,8 @@
 import ChatSession from '#models/chat_session'
 import ChatMessage from '#models/chat_message'
 import KVStore from '#models/kv_store'
+import db from '@adonisjs/lucid/services/db'
+import { chatDeletionScope } from '../utils/chat_session_delete.js'
 import logger from '@adonisjs/core/services/logger'
 import { DateTime } from 'luxon'
 import { inject } from '@adonisjs/core'
@@ -293,8 +295,17 @@ export class ChatService {
 
   async deleteSession(sessionId: number) {
     try {
-      const session = await ChatSession.findOrFail(sessionId)
-      await session.delete()
+      const scope = chatDeletionScope(sessionId)
+      // One conversation: its row, then the messages stored for that session id.
+      // Knowledge-base records are not queried here.
+      await db.transaction(async (trx) => {
+        const session = await ChatSession.query({ client: trx }).where('id', scope.sessionId).first()
+        if (!session) {
+          throw new Error('Failed to delete chat session')
+        }
+        await ChatMessage.query({ client: trx }).where('session_id', scope.messageSessionId).delete()
+        await session.useTransaction(trx).delete()
+      })
       return { success: true }
     } catch (error) {
       logger.error(
