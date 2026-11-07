@@ -22,7 +22,7 @@ Download (public prerelease, not a NOMAD product release):
 
 - Archive: https://github.com/SomerledDesign/project-nomad/releases/download/preview-pr1-f344344/nomad-preview-pr1-amd64.tar.gz
 - Checksums: https://raw.githubusercontent.com/SomerledDesign/project-nomad/cursor/individual-chat-delete-97c3/install/preview-pr1/CHECKSUMS.txt
-- Compose: https://raw.githubusercontent.com/SomerledDesign/project-nomad/cursor/individual-chat-delete-97c3/install/preview-pr1/compose.yaml
+- Compose: https://raw.githubusercontent.com/SomerledDesign/project-nomad/cursor/individual-chat-delete-97c3/install/preview-pr1/preview-stack.yaml
 - Synthetic chats: https://raw.githubusercontent.com/SomerledDesign/project-nomad/cursor/individual-chat-delete-97c3/install/preview-pr1/synthetic-chats.sql
 
 ## Runtime the CT needs
@@ -56,7 +56,7 @@ mkdir -p /opt/nomad-preview-pr1/storage
 cd /opt/nomad-preview-pr1
 
 # Download from the URLs in the PR. Do not git clone.
-curl -fL -o compose.yaml 'https://raw.githubusercontent.com/SomerledDesign/project-nomad/cursor/individual-chat-delete-97c3/install/preview-pr1/compose.yaml'
+curl -fL -o preview-stack.yaml 'https://raw.githubusercontent.com/SomerledDesign/project-nomad/cursor/individual-chat-delete-97c3/install/preview-pr1/preview-stack.yaml'
 curl -fL -o synthetic-chats.sql 'https://raw.githubusercontent.com/SomerledDesign/project-nomad/cursor/individual-chat-delete-97c3/install/preview-pr1/synthetic-chats.sql'
 curl -fL -o nomad-preview-pr1-amd64.tar.gz 'https://github.com/SomerledDesign/project-nomad/releases/download/preview-pr1-f344344/nomad-preview-pr1-amd64.tar.gz'
 curl -fL -o CHECKSUMS.txt 'https://raw.githubusercontent.com/SomerledDesign/project-nomad/cursor/individual-chat-delete-97c3/install/preview-pr1/CHECKSUMS.txt'
@@ -66,8 +66,8 @@ docker load -i nomad-preview-pr1-amd64.tar.gz
 docker image inspect nomad-preview-pr1:pr1 --format '{{.Id}} {{.Os}}/{{.Architecture}}'
 
 if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
-$DC -p nomad-preview-pr1 -f compose.yaml up -d
-$DC -p nomad-preview-pr1 -f compose.yaml ps
+$DC -p nomad-preview-pr1 -f preview-stack.yaml up -d
+$DC -p nomad-preview-pr1 -f preview-stack.yaml ps
 ```
 
 `docker image inspect` must report `linux/amd64`. The `synthetic-chats` service runs once after `/api/health` succeeds, then exits. That is expected.
@@ -91,7 +91,7 @@ On CT 105 only:
 ```bash
 cd /opt/nomad-preview-pr1
 if docker compose version >/dev/null 2>&1; then DC="docker compose"; else DC="docker-compose"; fi
-$DC -p nomad-preview-pr1 -f compose.yaml down -v
+$DC -p nomad-preview-pr1 -f preview-stack.yaml down -v
 rm -rf /opt/nomad-preview-pr1
 docker image rm nomad-preview-pr1:pr1 nomad-preview-pr1:f3443440a99042d911d60e2bdc18d91f99830f73
 ```
