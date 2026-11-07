@@ -72,6 +72,8 @@ $DC -p nomad-preview-pr1 -f preview-stack.yaml ps
 
 `docker image inspect` must report `linux/amd64`. The `synthetic-chats` service runs once after `/api/health` succeeds, then exits. That is expected.
 
+If `nomad_preview_admin` restarts with `Timed out waiting for Redis`, container-to-container networking on this CT is not working. Fix Docker on CT 105. Do not move this stack onto 10.72.72.88 to debug it.
+
 Open `http://10.72.72.219:8080/chat`.
 
 The sidebar should list only:
