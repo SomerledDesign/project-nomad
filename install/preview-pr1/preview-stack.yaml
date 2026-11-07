@@ -1,0 +1,104 @@
+# Isolated preview of SomerledDesign/project-nomad PR 1 (saved-chat flame delete).
+#
+# Run this only on the fresh preview CT 105, 10.72.72.219.
+# Do not run it on the live NOMAD host 10.72.72.88. Do not mount /opt/project-nomad.
+#
+# The admin image is loaded locally (nomad-preview-pr1:pr1). It is linux/amd64,
+# built from git f3443440a99042d911d60e2bdc18d91f99830f73. No git checkout is required.
+# MySQL and Redis use fresh named volumes. Nothing here is production data.
+
+name: nomad-preview-pr1
+
+services:
+  admin:
+    image: nomad-preview-pr1:pr1
+    container_name: nomad_preview_admin
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /opt/nomad-preview-pr1/storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=384
+      NOMAD_STORAGE_PATH: /opt/nomad-preview-pr1/storage
+      PORT: "8080"
+      HOST: 0.0.0.0
+      URL: http://10.72.72.219:8080
+      LOG_LEVEL: info
+      APP_KEY: preview-pr1-app-key-not-for-production
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: nomad
+      DB_USER: nomad_user
+      DB_PASSWORD: preview-pr1-db-7f3a
+      DB_SSL: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      DISABLE_COMPRESSION: "false"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+
+  mysql:
+    image: mysql:8.0
+    container_name: nomad_preview_mysql
+    restart: unless-stopped
+    command:
+      - --innodb-buffer-pool-size=128M
+      - --performance-schema=OFF
+      - --innodb-use-native-aio=0
+      - --max-connections=30
+    environment:
+      MYSQL_ROOT_PASSWORD: preview-pr1-root-7f3a
+      MYSQL_DATABASE: nomad
+      MYSQL_USER: nomad_user
+      MYSQL_PASSWORD: preview-pr1-db-7f3a
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: nomad_preview_redis
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  synthetic-chats:
+    image: mysql:8.0
+    depends_on:
+      admin:
+        condition: service_healthy
+    environment:
+      MYSQL_PWD: preview-pr1-db-7f3a
+    volumes:
+      - ./synthetic-chats.sql:/synthetic-chats.sql:ro
+    entrypoint: ["mysql", "-hmysql", "-unomad_user", "--protocol=TCP", "nomad", "-e", "source /synthetic-chats.sql"]
+    restart: "no"
+
+volumes:
+  mysql-data:
+  redis-data:

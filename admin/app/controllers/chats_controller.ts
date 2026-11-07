@@ -2,6 +2,7 @@ import { inject } from '@adonisjs/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import { ChatService } from '#services/chat_service'
 import { createSessionSchema, updateSessionSchema, addMessageSchema } from '#validators/chat'
+import { parseChatSessionId } from '../utils/chat_session_delete.js'
 import KVStore from '#models/kv_store'
 import { SystemService } from '#services/system_service'
 import { SERVICE_NAMES } from '../../constants/service_names.js'
@@ -80,8 +81,12 @@ export default class ChatsController {
   }
 
   async destroy({ params, response }: HttpContext) {
+    const sessionId = parseChatSessionId(params.id)
+    if (sessionId === null) {
+      return response.status(400).json({ error: 'Invalid chat session id' })
+    }
+
     try {
-      const sessionId = parseInt(params.id)
       await this.chatService.deleteSession(sessionId)
       return response.status(204)
     } catch (error) {
